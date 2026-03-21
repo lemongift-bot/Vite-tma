@@ -1,13 +1,93 @@
 <!DOCTYPE html>
 <html lang="uz">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Telegram Mini App</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram InitData Debugger</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
+        .profile-section { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+        .profile-pic { width: 100px; height: 100px; border-radius: 50%; background: #ddd; margin-bottom: 10px; object-fit: cover; border: 3px solid #0088cc; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #eee; font-size: 14px; }
+        .info-label { font-weight: bold; color: #666; }
+        .json-container { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 8px; overflow-x: auto; font-family: monospace; font-size: 12px; margin-top: 20px; position: relative; }
+        .copy-btn { width: 100%; margin-top: 15px; padding: 12px; background: #0088cc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
+        .copy-btn:active { background: #006699; }
+        .status { font-size: 12px; color: green; text-align: center; margin-top: 5px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="profile-section">
+        <img id="user-pic" class="profile-pic" src="https://via.placeholder.com/100" alt="Profile">
+        <h2 id="display-name">Noma'lum foydalanuvchi</h2>
+        <span id="display-username" style="color: #0088cc;">@username</span>
+    </div>
+
+    <div id="info-list">
+        </div>
+
+    <h3 style="margin-top: 25px;">To'liq JSON (initDataUnsafe)</h3>
+    <div class="json-container">
+        <pre id="json-output"></pre>
+    </div>
+    
+    <button class="copy-btn" onclick="copyJson()">JSON nusxalash</button>
+    <div id="status-msg" class="status">Nusxalandi! ✅</div>
+</div>
+
+<script>
+    // Telegram WebApp init
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    const user = tg.initDataUnsafe.user || {};
+
+    // 1. Profil qismini to'ldirish
+    document.getElementById('user-pic').src = user.photo_url || 'https://ui-avatars.com/api/?name=' + (user.first_name || 'U');
+    document.getElementById('display-name').textContent = (user.first_name || '') + ' ' + (user.last_name || '');
+    document.getElementById('display-username').textContent = user.username ? '@' + user.username : 'Username yo\'q';
+
+    // 2. Batafsil ma'lumotlar ro'yxati
+    const infoList = document.getElementById('info-list');
+    const details = {
+        "User ID": user.id,
+        "First Name": user.first_name,
+        "Last Name": user.last_name || "Mavjud emas",
+        "Username": user.username || "Mavjud emas",
+        "Language": user.language_code,
+        "Is Premium": user.is_premium ? "Ha 🌟" : "Yo'q",
+        "Auth Date": tg.initDataUnsafe.auth_date,
+        "Query ID": tg.initDataUnsafe.query_id || "Mavjud emas"
+    };
+
+    for (const [key, value] of Object.entries(details)) {
+        infoList.innerHTML += `
+            <div class="info-row">
+                <span class="info-label">${key}:</span>
+                <span>${value}</span>
+            </div>
+        `;
+    }
+
+    // 3. To'liq JSON chiqishi
+    const fullJson = JSON.stringify(tg.initDataUnsafe, null, 2);
+    document.getElementById('json-output').textContent = fullJson;
+
+    // 4. Nusxalash funksiyasi
+    function copyJson() {
+        const text = document.getElementById('json-output').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            const status = document.getElementById('status-msg');
+            status.style.display = 'block';
+            setTimeout(() => status.style.display = 'none', 2000);
+        });
+    }
+</script>
+
+</body>
 </html>
