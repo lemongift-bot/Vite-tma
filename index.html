@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <title>Velwix Auth</title>
+
+  <!-- Telegram WebApp script -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+      padding: 30px;
+    }
+
+    button {
+      padding: 12px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background: #22c55e;
+      color: white;
+      cursor: pointer;
+    }
+
+    pre {
+      margin-top: 20px;
+      text-align: left;
+      background: #111827;
+      padding: 15px;
+      border-radius: 10px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🚀 Telegram Auth Test</h2>
+
+  <button onclick="sendData()">Serverga yuborish</button>
+
+  <pre id="output">Natija bu yerda chiqadi...</pre>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+
+    tg.expand(); // Fullscreen
+
+    async function sendData() {
+      try {
+        const initData = tg.initData;
+
+        if (!initData) {
+          document.getElementById("output").textContent = "❌ initData topilmadi (Telegram ichida oching)";
+          return;
+        }
+
+        // DEBUG
+        console.log("INIT DATA:", initData);
+
+        const res = await fetch("https://api.lemon-gift.workers.dev/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ initData })
+        });
+
+        const data = await res.json();
+
+        document.getElementById("output").textContent =
+          JSON.stringify(data, null, 2);
+
+      } catch (err) {
+        document.getElementById("output").textContent =
+          "❌ Xatolik: " + err.message;
+      }
+    }
+  </script>
+
+</body>
+</html>
