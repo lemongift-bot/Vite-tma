@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VelWix Debugger</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #ffffff);
+            --text-color: var(--tg-theme-text-color, #222222);
+            --button-color: var(--tg-theme-button-color, #0088cc);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f7);
+        }
+
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background-color: var(--secondary-bg);
+            color: var(--text-color);
+            margin: 0; padding: 15px;
+        }
+
+        .card {
+            background: var(--bg-color);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        h3 { margin-top: 0; color: var(--button-color); }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 250px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid #333;
+        }
+
+        .status-box {
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+        .success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--button-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:active { opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h3>User Info</h3>
+        <div id="user-preview">Yuklanmoqda...</div>
+    </div>
+
+    <div id="status-display" class="status-box" style="display:none;"></div>
+
+    <div class="card">
+        <button id="reg-btn">API: Register & Verify</button>
+    </div>
+
+    <div class="card">
+        <h3>Console Logs</h3>
+        <div id="log-screen" class="log-container">System initialized...</div>
+    </div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    const logScreen = document.getElementById('log-screen');
+    const statusDisplay = document.getElementById('status-display');
+    const userPreview = document.getElementById('user-preview');
+    const regBtn = document.getElementById('reg-btn');
+
+    // Custom Logger
+    function addLog(msg, data = null) {
+        const time = new Date().toLocaleTimeString();
+        let logText = `[${time}] ${msg}`;
+        if (data) logText += `\n${JSON.stringify(data, null, 2)}`;
+        
+        const newLog = document.createElement('div');
+        newLog.textContent = logText + "\n-------------------";
+        logScreen.prepend(newLog);
+        console.log(msg, data);
+    }
+
+    // Initialize TG
+    tg.expand();
+    tg.ready();
+
+    if (tg.initDataUnsafe.user) {
+        const u = tg.initDataUnsafe.user;
+        userPreview.innerHTML = `
+            <b>ID:</b> ${u.id}<br>
+            <b>Name:</b> ${u.first_name}<br>
+            <b>User:</b> @${u.username || 'yoq'}
+        `;
+        addLog("Telegram User Detected", u);
+    } else {
+        userPreview.innerText = "Telegram muhiti aniqlanmadi!";
+        addLog("Error: No initData found. Are you in Telegram?");
+    }
+
+    regBtn.addEventListener('click', async () => {
+        statusDisplay.style.display = 'none';
+        addLog("Request started: POST /auth/register");
+        
+        try {
+            const response = await fetch('https://api.lemon-gift1.workers.dev/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData: tg.initData })
+            });
+
+            const result = await response.json();
+            addLog("Response Received", result);
+
+            statusDisplay.style.display = 'block';
+            if (result.Success === true) {
+                statusDisplay.className = "status-box success";
+                statusDisplay.innerText = "SUCCESS: " + result.message;
+            } else {
+                statusDisplay.className = "status-box error";
+                statusDisplay.innerText = "FAILED: " + (result.error || "Noma'lum xato");
+            }
+
+        } catch (err) {
+            addLog("Network Error", err.message);
+            statusDisplay.style.display = 'block';
+            statusDisplay.className = "status-box error";
+            statusDisplay.innerText = "Network Error: " + err.message;
+        }
+    });
+</script>
+</body>
+</html>
