@@ -1,157 +1,133 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VelWix Debugger</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VelWix API Console</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg-color: var(--tg-theme-bg-color, #ffffff);
-            --text-color: var(--tg-theme-text-color, #222222);
-            --button-color: var(--tg-theme-button-color, #0088cc);
-            --secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f7);
-        }
-
-        body {
-            font-family: -apple-system, system-ui, sans-serif;
-            background-color: var(--secondary-bg);
-            color: var(--text-color);
-            margin: 0; padding: 15px;
-        }
-
-        .card {
-            background: var(--bg-color);
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 15px;
-        }
-
-        h3 { margin-top: 0; color: var(--button-color); }
-
-        .log-container {
-            background: #1e1e1e;
-            color: #00ff00;
-            padding: 10px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 250px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            border: 1px solid #333;
-        }
-
-        .status-box {
-            padding: 10px;
-            border-radius: 8px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
-        .success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--button-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        button:active { opacity: 0.8; }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #0056b3; }
+        pre { background: #eee; padding: 10px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
+        button:hover { background-color: #0056b3; }
+        .result-section { margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px; }
+        .success { color: green; }
+        .error { color: red; }
+        .endpoint-group { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"] { width: calc(100% - 22px); padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h1>VelWix API Console</h1>
+        <p>Backend URL: <a href="https://api.lemon-gift1.workers.dev/" target="_blank">https://api.lemon-gift1.workers.dev/</a></p>
+        <p>Telegram `initData`: <pre id="initDataDisplay">Loading...</pre></p>
+        <p id="telegramUserDisplay"></p>
 
-    <div class="card">
-        <h3>User Info</h3>
-        <div id="user-preview">Yuklanmoqda...</div>
+        <hr>
+
+        <h2>Test Endpoints:</h2>
+
+        <div class="endpoint-group">
+            <h3>POST /auth/register</h3>
+            <p>Yangi foydalanuvchini ro'yxatdan o'tkazish yoki mavjudini yangilash.</p>
+            <button onclick="testEndpoint('/auth/register', {})">Test Register</button>
+            <div id="result-register" class="result-section"></div>
+        </div>
+
+        <div class="endpoint-group">
+            <h3>POST /auth/ref</h3>
+            <p>Referal orqali yangi foydalanuvchini ro'yxatdan o'tkazish va bonus berish.</p>
+            <label for="referrerId">Referrer ID (ixtiyoriy):</label>
+            <input type="text" id="referrerId" placeholder="Referrer Telegram ID">
+            <button onclick="testReferral()">Test Referral</button>
+            <div id="result-ref" class="result-section"></div>
+        </div>
+
+        <div class="endpoint-group">
+            <h3>POST /user/referrals</h3>
+            <p>O'zingiz chaqirgan do'stlar ro'yxatini olish.</p>
+            <button onclick="testEndpoint('/user/referrals', {})">Test Get Referrals</button>
+            <div id="result-get-ref" class="result-section"></div>
+        </div>
+
+        <div class="endpoint-group">
+            <h3>POST /user/wallet</h3>
+            <p>Balans va foydalanuvchi ma'lumotlarini olish.</p>
+            <button onclick="testEndpoint('/user/wallet', {})">Test Get Wallet</button>
+            <div id="result-wallet" class="result-section"></div>
+        </div>
     </div>
 
-    <div id="status-display" class="status-box" style="display:none;"></div>
+    <script>
+        const BACKEND_URL = "https://api.lemon-gift1.workers.dev/";
+        let initData = '';
+        let telegramUser = null;
 
-    <div class="card">
-        <button id="reg-btn">API: Register & Verify</button>
-    </div>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.ready();
+                initData = window.Telegram.WebApp.initData;
+                document.getElementById('initDataDisplay').textContent = initData || 'initData mavjud emas. Loyihani Telegram ichida ishga tushiring.';
 
-    <div class="card">
-        <h3>Console Logs</h3>
-        <div id="log-screen" class="log-container">System initialized...</div>
-    </div>
-
-<script>
-    const tg = window.Telegram.WebApp;
-    const logScreen = document.getElementById('log-screen');
-    const statusDisplay = document.getElementById('status-display');
-    const userPreview = document.getElementById('user-preview');
-    const regBtn = document.getElementById('reg-btn');
-
-    // Custom Logger
-    function addLog(msg, data = null) {
-        const time = new Date().toLocaleTimeString();
-        let logText = `[${time}] ${msg}`;
-        if (data) logText += `\n${JSON.stringify(data, null, 2)}`;
-        
-        const newLog = document.createElement('div');
-        newLog.textContent = logText + "\n-------------------";
-        logScreen.prepend(newLog);
-        console.log(msg, data);
-    }
-
-    // Initialize TG
-    tg.expand();
-    tg.ready();
-
-    if (tg.initDataUnsafe.user) {
-        const u = tg.initDataUnsafe.user;
-        userPreview.innerHTML = `
-            <b>ID:</b> ${u.id}<br>
-            <b>Name:</b> ${u.first_name}<br>
-            <b>User:</b> @${u.username || 'yoq'}
-        `;
-        addLog("Telegram User Detected", u);
-    } else {
-        userPreview.innerText = "Telegram muhiti aniqlanmadi!";
-        addLog("Error: No initData found. Are you in Telegram?");
-    }
-
-    regBtn.addEventListener('click', async () => {
-        statusDisplay.style.display = 'none';
-        addLog("Request started: POST /auth/register");
-        
-        try {
-            const response = await fetch('https://api.lemon-gift1.workers.dev/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData: tg.initData })
-            });
-
-            const result = await response.json();
-            addLog("Response Received", result);
-
-            statusDisplay.style.display = 'block';
-            if (result.Success === true) {
-                statusDisplay.className = "status-box success";
-                statusDisplay.innerText = "SUCCESS: " + result.message;
+                if (window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                    telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
+                    document.getElementById('telegramUserDisplay').innerHTML = `
+                        <b>Current User:</b> ${telegramUser.first_name} ${telegramUser.last_name || ''}
+                        (@${telegramUser.username || 'N/A'}) (ID: ${telegramUser.id})
+                    `;
+                } else {
+                    document.getElementById('telegramUserDisplay').textContent = 'Telegram user ma\'lumotlari mavjud emas.';
+                }
             } else {
-                statusDisplay.className = "status-box error";
-                statusDisplay.innerText = "FAILED: " + (result.error || "Noma'lum xato");
+                document.getElementById('initDataDisplay').textContent = 'Telegram WebApp obyekti topilmadi. Loyihani Telegram ichida ishga tushiring.';
+            }
+        });
+
+        async function testEndpoint(path, additionalPayload = {}) {
+            const resultDiv = document.getElementById(`result-${path.split('/').pop()}`);
+            resultDiv.innerHTML = 'Sending request...';
+
+            if (!initData) {
+                resultDiv.innerHTML = '<p class="error">Xato: initData mavjud emas. Iltimos, loyihani Telegram ichida sinab ko\'ring.</p>';
+                return;
             }
 
-        } catch (err) {
-            addLog("Network Error", err.message);
-            statusDisplay.style.display = 'block';
-            statusDisplay.className = "status-box error";
-            statusDisplay.innerText = "Network Error: " + err.message;
+            try {
+                const response = await fetch(`${BACKEND_URL}${path}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        initData: initData,
+                        ...additionalPayload
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<p class="success">Muvaffaqiyatli! Status: ${response.status}</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">Xato! Status: ${response.status}</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Tarmoq xatosi yoki serverga ulanib bo'lmadi: ${error.message}</p>`;
+            }
         }
-    });
-</script>
+
+        function testReferral() {
+            const referrerIdInput = document.getElementById('referrerId');
+            const referrerId = referrerIdInput.value.trim();
+            const payload = referrerId ? { referrerId: referrerId } : {};
+            testEndpoint('/auth/ref', payload);
+        }
+    </script>
 </body>
 </html>
+
