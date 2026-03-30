@@ -1,46 +1,47 @@
-import { useEffect, useState } from 'react';
-import './App.css';
+import React, { useEffect } from 'react';
 
-// SDK ni window ob'ektidan olish
-const tg = (window as any).Telegram.WebApp;
+// Telegram WebApp obyekti uchun tip yaratamiz
+declare global {
+  interface Window {
+    Telegram: any;
+  }
+}
 
-function App() {
-  const [user, setUser] = useState<any>(null);
+const App: React.FC = () => {
+  const tg = window.Telegram.WebApp;
 
   useEffect(() => {
-    // Ilovani tayyorlash
+    // Ilovani to'liq ekranga yoyish
     tg.ready();
-    tg.expand(); // Ilovani to'liq ekranga yoyish
-
-    // Foydalanuvchi ma'lumotlarini olish
-    setUser(tg.initDataUnsafe?.user);
-
-    // Asosiy tugma
-    tg.MainButton.text = "Salom Berish";
-    tg.MainButton.show();
-    
-    tg.MainButton.onClick(() => {
-      tg.showAlert("Salom, " + tg.initDataUnsafe?.user?.first_name);
-    });
-
-    return () => tg.MainButton.hide();
-  }, []);
+    tg.expand();
+  }, [tg]);
 
   return (
-    <div className="app-container">
-      <h1>Mening Mini Appim</h1>
-      {user ? (
-        <div className="user-card">
-          <p><b>Ism:</b> {user.first_name}</p>
-          <p><b>Username:</b> @{user.username}</p>
-          <p><b>ID:</b> {user.id}</p>
-        </div>
-      ) : (
-        <p>Telegramdan tashqarida ishga tushirildi</p>
-      )}
-      <button className="close-btn" onClick={() => tg.close()}>Yopish</button>
+    <div style={{ 
+      padding: '20px', 
+      textAlign: 'center', 
+      color: tg.themeParams.text_color || '#000',
+      background: tg.themeParams.bg_color || '#fff',
+      height: '100vh' 
+    }}>
+      <h1>Salom, Dunyo! 🌍</h1>
+      <p>Foydalanuvchi: <b>{tg.initDataUnsafe?.user?.first_name || 'Mehmon'}</b></p>
+      
+      <button 
+        onClick={() => tg.close()}
+        style={{
+          padding: '10px 20px',
+          backgroundColor: tg.themeParams.button_color || '#248bed',
+          color: tg.themeParams.button_text_color || '#ffffff',
+          border: 'none',
+          borderRadius: '8px',
+          marginTop: '20px'
+        }}
+      >
+        Ilovani yopish
+      </button>
     </div>
   );
-}
+};
 
 export default App;
