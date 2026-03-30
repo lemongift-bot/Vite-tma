@@ -6,16 +6,10 @@ const Profile = () => {
   const tg = window.Telegram.WebApp;
 
   useEffect(() => {
-    // Orqaga qaytish tugmasini ko'rsatish
     tg.BackButton.show();
-
-    const handleBack = () => {
-      navigate('/');
-    };
-
+    const handleBack = () => navigate('/');
     tg.onEvent('backButtonClicked', handleBack);
 
-    // Sahifadan chiqayotganda yashirish
     return () => {
       tg.offEvent('backButtonClicked', handleBack);
       tg.BackButton.hide();
@@ -24,16 +18,11 @@ const Profile = () => {
 
   return (
     <div style={{ padding: '20px', textAlign: 'center' }}>
-      <h1>Mening Profilim 👤</h1>
-      <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '10px' }}>
-        <p>Ism: <b>{tg.initDataUnsafe?.user?.first_name || 'Foydalanuvchi'}</b></p>
-        <p>ID: <code>{tg.initDataUnsafe?.user?.id || 'No'}</code></p>
-      </div>
-      <br />
-      <button onClick={() => navigate('/')}>Bosh sahifaga qaytish</button>
+      <h1>Profil 👤</h1>
+      <p>Ism: {tg.initDataUnsafe?.user?.first_name || 'Foydalanuvchi'}</p>
+      <button onClick={() => navigate('/')}>Orqaga</button>
     </div>
   );
 };
 
 export default Profile;
-
