@@ -27,7 +27,7 @@ const Profile = () => {
       <h1>Mening Profilim 👤</h1>
       <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '10px' }}>
         <p>Ism: <b>{tg.initDataUnsafe?.user?.first_name || 'Foydalanuvchi'}</b></p>
-        <p>ID: <code>{tg.initDataUnsafe?.user?.id || 'Noma'lum'}</code></p>
+        <p>ID: <code>{tg.initDataUnsafe?.user?.id || 'No'}</code></p>
       </div>
       <br />
       <button onClick={() => navigate('/')}>Bosh sahifaga qaytish</button>
@@ -36,3 +36,4 @@ const Profile = () => {
 };
 
 export default Profile;
+
