@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Velwix API Tester 🥇</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f7f6; padding: 15px; color: #333; margin: 0; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        h2, h3 { margin-top: 0; color: #007bff; font-size: 1.2rem; }
+        .btn-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        button { padding: 12px; border: none; border-radius: 8px; background: #007bff; color: white; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
+        button:active { transform: scale(0.98); opacity: 0.8; }
+        button.orange { background: #fd7e14; }
+        button.red { background: #dc3545; }
+        #log-container { background: #1e1e1e; color: #00ff00; padding: 12px; border-radius: 8px; font-family: 'Courier New', monospace; height: 250px; overflow-y: auto; white-space: pre-wrap; font-size: 12px; border: 1px solid #333; }
+        .status { font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; display: block; padding: 5px 10px; border-radius: 5px; background: #eee; }
+        input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none; }
+        input:focus { border-color: #007bff; }
+        .label { font-size: 12px; color: #666; margin-bottom: 4px; display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Velwix API Tester</h2>
+        <span class="status" id="tg-status">Tekshirilmoqda...</span>
+        
+        <label class="label">Backend URL:</label>
+        <input type="text" id="api-url" value="https://api1.lemon-gift1.workers.dev" placeholder="https://...">
+        
+        <label class="label">Referral ID (start_param):</label>
+        <input type="text" id="ref-id" placeholder="Start param yo'q">
+    </div>
+
+    <div class="card">
+        <h3>API Buyruqlari</h3>
+        <div class="btn-group">
+            <button onclick="testRoute('/', 'GET')">Ping (Asosiy)</button>
+            <button onclick="testRoute('/auth/register', 'POST')">Register</button>
+            <button onclick="testRoute('/auth/ref', 'POST', true)">Referral Auth</button>
+            <button class="orange" onclick="testRoute('/get/wallet', 'GET')">Hamyon</button>
+            <button class="orange" onclick="testRoute('/get/referrals', 'GET')">Referrallarim</button>
+            <button class="orange" onclick="testRoute('/get/reyting', 'GET')">Reyting</button>
+        </div>
+        <button class="red" style="width: 100%; margin-top: 10px;" onclick="clearLog()">Loglarni tozalash</button>
+    </div>
+
+    <div class="card">
+        <h3>Log:</h3>
+        <div id="log-container">Kutilmoqda...</div>
+    </div>
+
+    <script>
+        // Telegram WebApp obyektini olish
+        const tg = window.Telegram.WebApp;
+        const logElement = document.getElementById('log-container');
+        const statusElement = document.getElementById('tg-status');
+        const refInput = document.getElementById('ref-id');
+
+        // 1. Telegram muhitini tayyorlash
+        tg.ready();
+        tg.expand();
+
+        // 2. Start Paramni avtomatik olish
+        if (tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+            refInput.value = tg.initDataUnsafe.start_param;
+        }
+
+        // 3. Statusni yangilash
+        if (tg.initData) {
+            statusElement.innerText = `✅ Telegram: ${tg.initDataUnsafe.user?.first_name || 'Foydalanuvchi'}`;
+            statusElement.style.color = "#28a745";
+        } else {
+            statusElement.innerText = "⚠️ Brauzer rejimi (Dummy data ishlatiladi)";
+            statusElement.style.color = "#fd7e14";
+        }
+
+        async function testRoute(path, method = 'GET', isRef = false) {
+            const baseUrl = document.getElementById('api-url').value.trim();
+            const refId = refInput.value.trim();
+            const url = baseUrl + path;
+
+            // Xavfsizlik: Bo'sh URL bo'lsa to'xtatish
+            if (!baseUrl) {
+                addLog("❌ Xato: API URL kiritilmagan!");
+                return;
+            }
+
+            addLog(`📡 So'rov: ${method} ${path}`);
+
+            // Telegram initData (Brauzerda bo'lsa dummy string yuboradi)
+            const initData = tg.initData || "user=%7B%22id%22%3A12345%2C%22first_name%22%3A%22Test%22%7D&hash=dummy";
+
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `tma ${initData}` // Ko'pincha 'Authorization' headeri ishlatiladi
+            };
+
+            const options = {
+                method: method,
+                headers: headers
+            };
+
+            // Agar POST bo'lsa va referral kerak bo'lsa
+            if (method === 'POST') {
+                const bodyData = {};
+                if (isRef) bodyData.start_param = refId;
+                // Qo'shimcha ma'lumotlar kerak bo'lsa shu yerga qo'shiladi
+                options.body = JSON.stringify(bodyData);
+            }
+
+            try {
+                const response = await fetch(url, options);
+                
+                // Content-type tekshirish
+                const contentType = response.headers.get("content-type");
+                let data;
+                if (contentType && contentType.includes("application/json")) {
+                    data = await response.json();
+                } else {
+                    data = await response.text();
+                }
+
+                addLog(`📥 Javob (${response.status}):\n${typeof data === 'object' ? JSON.stringify(data, null, 2) : data}`);
+            } catch (error) {
+                addLog(`❌ Xatolik yuz berdi:\n${error.message}\n(Eslatma: Backendda CORS ruxsat berilgan bo'lishi kerak)`);
+            }
+        }
+
+        function addLog(message) {
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ":" + 
+                            now.getMinutes().toString().padStart(2, '0') + ":" + 
+                            now.getSeconds().toString().padStart(2, '0');
+            
+            logElement.innerText += `\n[${timeStr}] ${message}\n` + "-".repeat(20);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            logElement.innerText = "Loglar tozalandi...";
+        }
+    </script>
+</body>
+</html>
