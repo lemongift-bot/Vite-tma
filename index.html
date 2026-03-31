@@ -1,13 +1,105 @@
 <!DOCTYPE html>
 <html lang="uz">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>My Telegram Mini App</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velwix API Tester 🥇</title>
+    <script src="https://telegram.org"></script>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { margin-top: 0; color: #007bff; }
+        .btn-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        button { padding: 12px; border: none; border-radius: 8px; background: #007bff; color: white; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #0056b3; }
+        button.orange { background: #fd7e14; }
+        #log-container { background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 8px; font-family: monospace; height: 300px; overflow-y: auto; white-space: pre-wrap; }
+        .status { font-weight: bold; margin-bottom: 10px; display: block; }
+        input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Velwix Mini App API Tester</h2>
+        <span class="status" id="tg-status">Telegram WebApp: Yuklanmoqda...</span>
+        <input type="text" id="api-url" value="https://api1.lemon-gift1.workers.dev" placeholder="API URL">
+        <input type="text" id="ref-id" value="123456789" placeholder="Referral ID (start_param)">
+    </div>
+
+    <div class="card">
+        <h3>Amallar</h3>
+        <div class="btn-group">
+            <button onclick="testRoute('/')">Asosiy (Ping)</button>
+            <button onclick="testRoute('/auth/register', 'POST')">Register</button>
+            <button onclick="testRoute('/auth/ref', 'POST', true)">Referral Auth</button>
+            <button class="orange" onclick="testRoute('/get/wallet')">Wallet (Balance)</button>
+            <button class="orange" onclick="testRoute('/get/referrals')">My Referrals</button>
+            <button class="orange" onclick="testRoute('/get/reyting')">Leaderboard</button>
+            <button style="background: #dc3545;" onclick="clearLog()">Loglarni tozalash</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Natija (Response Log):</h3>
+        <div id="log-container">Kutilmoqda...</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        const logElement = document.getElementById('log-container');
+        
+        // Telegram holatini tekshirish
+        if (tg.initData) {
+            document.getElementById('tg-status').innerText = "✅ Telegram initData topildi";
+            document.getElementById('tg-status').style.color = "green";
+        } else {
+            document.getElementById('tg-status').innerText = "⚠️ Telegram muhiti emas (Sinov uchun dummy data ishlatiladi)";
+            document.getElementById('tg-status').style.color = "orange";
+        }
+
+        tg.expand();
+
+        async function testRoute(path, method = 'GET', isRef = false) {
+            const baseUrl = document.getElementById('api-url').value;
+            const refId = document.getElementById('ref-id').value;
+            const url = baseUrl + path;
+            
+            // Dummy data (agar brauzerda ochilsa)
+            const initData = tg.initData || "user=%7B%22id%22%3A12345%2C%22first_name%22%3A%22Test%22%7D&hash=dummy_hash";
+
+            addLog(`🚀 So'rov yuborilmoqda: ${method} ${path}...`);
+
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-telegram-init-data': initData
+                }
+            };
+
+            if (isRef && method === 'POST') {
+                options.body = JSON.stringify({ start_param: refId });
+            }
+
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                addLog(`📥 Javob (${response.status}):\n${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                addLog(`❌ Xatolik: ${error.message}`);
+            }
+        }
+
+        function addLog(message) {
+            const now = new Date().toLocaleTimeString();
+            logElement.innerText += `\n[${now}] ${message}\n-------------------`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            logElement.innerText = "Loglar tozalandi...";
+        }
+    </script>
+</body>
 </html>
