@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Velwix API Debugger</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d0f14;
+            --card: #161920;
+            --accent: #00f2ff;
+            --text: #ffffff;
+            --border: #262c3a;
+            --green: #00ff88;
+            --red: #ff3d71;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text);
+            padding: 15px; margin: 0; line-height: 1.4;
+        }
+        .header { font-family: 'Syne', sans-serif; font-size: 24px; color: var(--accent); margin-bottom: 20px; text-align: center; }
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 15px; margin-bottom: 15px;
+        }
+        .label { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 5px; display: block; font-weight: bold; }
+        input {
+            width: 100%; background: #000; border: 1px solid var(--border);
+            padding: 10px; color: var(--accent); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; margin-bottom: 10px; box-sizing: border-box;
+        }
+        .status-box {
+            display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 10px;
+            padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05);
+        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+        .dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+        .btn-main {
+            width: 100%; background: var(--accent); color: #000; border: none;
+            padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer;
+            font-size: 16px; margin-bottom: 10px; transition: 0.2s;
+        }
+        .btn-main:active { transform: scale(0.98); opacity: 0.8; }
+        
+        #console {
+            background: #000; border: 1px solid var(--border); border-radius: 8px;
+            height: 250px; overflow-y: auto; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #aaa;
+        }
+        .log-entry { margin-bottom: 8px; border-bottom: 1px solid #111; padding-bottom: 4px; }
+        .log-time { color: #555; }
+        .log-err { color: var(--red); }
+        .log-ok { color: var(--green); }
+        .log-info { color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="header">VELWIX TESTER</div>
+
+<div class="card">
+    <div class="status-box">
+        <div id="dot" class="dot"></div>
+        <span id="status-text">Telegram aniqlanmoqda...</span>
+    </div>
+    
+    <label class="label">Worker URL</label>
+    <input type="text" id="api-url" value="https://api1.lemon-gift1.workers.dev" placeholder="https://...">
+</div>
+
+<button class="btn-main" onclick="startRegister()">REGISTER (POST /auth/register)</button>
+
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span class="label" style="margin:0">Konsol</span>
+        <span onclick="clearLog()" style="font-size:10px; color:var(--red); cursor:pointer;">Tozalash</span>
+    </div>
+    <div id="console">// Buyruq kutilmoqda...</div>
+</div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    const logContainer = document.getElementById('console');
+    const statusText = document.getElementById('status-text');
+    const dot = document.getElementById('dot');
+
+    // Init Telegram
+    tg.ready();
+    tg.expand();
+
+    if (tg.initData) {
+        dot.classList.add('active');
+        statusText.innerText = "Telegram: " + (tg.initDataUnsafe.user?.first_name || "User OK");
+        statusText.style.color = "var(--green)";
+    } else {
+        statusText.innerText = "Brauzer rejimi (InitData yo'q)";
+        statusText.style.color = "var(--red)";
+    }
+
+    async function startRegister() {
+        const baseUrl = document.getElementById('api-url').value.trim();
+        const endpoint = "/auth/register";
+        const url = baseUrl + endpoint;
+
+        addLog('info', `Yuborilmoqda: POST ${endpoint}`);
+
+        if (!tg.initData) {
+            addLog('err', "Xato: Telegram initData topilmadi! Bot ichida oching.");
+            // return; // Test uchun o'chirib qo'yishingiz mumkin
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-telegram-init-data': tg.initData || "test_mode_no_data"
+                },
+                // Register.ts body ichidan ham qidirishi uchun:
+                body: JSON.stringify({ 
+                    initData: tg.initData,
+                    test_mode: !tg.initData 
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                addLog('ok', `Muvaffaqiyat (${response.status})`);
+                addLog('info', JSON.stringify(result, null, 2));
+            } else {
+                addLog('err', `Xato (${response.status}): ${result.error || 'Noma\'lum'}`);
+                if (result.details) addLog('err', `Details: ${result.details}`);
+            }
+
+        } catch (error) {
+            addLog('err', "Fetch xatosi: " + error.message);
+            addLog('err', "CORS sozlamalarini tekshiring!");
+        }
+    }
+
+    function addLog(type, msg) {
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        const time = new Date().toLocaleTimeString().split(' ')[0];
+        
+        let colorClass = 'log-info';
+        if (type === 'err') colorClass = 'log-err';
+        if (type === 'ok') colorClass = 'log-ok';
+
+        div.innerHTML = `<span class="log-time">[${time}]</span> <span class="${colorClass}">${msg}</span>`;
+        logContainer.prepend(div);
+    }
+
+    function clearLog() {
+        logContainer.innerHTML = "// Konsol tozalandi...";
+    }
+</script>
+
+</body>
+</html>
